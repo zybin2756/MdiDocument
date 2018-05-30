@@ -25,10 +25,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+    mdichild.cpp
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+    mdichild.h
 
 FORMS += \
         mainwindow.ui
+
+RESOURCES += \
+    src.qrc
