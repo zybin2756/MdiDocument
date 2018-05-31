@@ -5,6 +5,7 @@
 #include <QMdiSubWindow>
 
 class MdiChild;
+class QSignalMapper;
 
 namespace Ui {
 class MainWindow;
@@ -20,12 +21,16 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    QSignalMapper *windowMapper;
     MdiChild* activeMdiChild();
     MdiChild* createMdiChild();
     QMdiSubWindow* findMdiChild(const QString &fileName);
-    void setActiveSubWindow(QWidget* window);
+
+
 private slots:
     void updateMenus();
+    void updateWindowMenu();
+    void setActiveSubWindow(QWidget* window);
     void on_actionNew_triggered();
     void on_actionOpen_triggered();
 };

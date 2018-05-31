@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QTextEdit>
 
+
+
 class MdiChild : public QTextEdit
 {
     Q_OBJECT
@@ -17,8 +19,9 @@ public:
     QString currentFile(){
         return curFileName;
     }
+    QString userFirendlyName();
 protected:
-//    void closeEvent(QCloseEvent * event);
+    void closeEvent(QCloseEvent * event);
 private slots:
     void documentWasModified();
 
@@ -27,6 +30,7 @@ private:
     void setCurrentFile(const QString &file);
     QString curFileName;
     bool isUntitled;
+
 };
 
 #endif // MDICHILD_H
