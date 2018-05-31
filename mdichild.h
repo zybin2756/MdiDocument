@@ -17,8 +17,9 @@ public:
     QString currentFile(){
         return curFileName;
     }
+    QString userFirendlyPath();
 protected:
-//    void closeEvent(QCloseEvent * event);
+    void closeEvent(QCloseEvent * event);
 private slots:
     void documentWasModified();
 
