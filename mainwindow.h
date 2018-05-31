@@ -2,6 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QMdiSubWindow>
+
+class MdiChild;
 
 namespace Ui {
 class MainWindow;
@@ -17,6 +20,14 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    MdiChild* activeMdiChild();
+    MdiChild* createMdiChild();
+    QMdiSubWindow* findMdiChild(const QString &fileName);
+    void setActiveSubWindow(QWidget* window);
+private slots:
+    void updateMenus();
+    void on_actionNew_triggered();
+    void on_actionOpen_triggered();
 };
 
 #endif // MAINWINDOW_H
