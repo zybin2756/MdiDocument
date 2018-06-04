@@ -1,12 +1,23 @@
 #include "mdichild.h"
+
+//工具类
 #include <QFile>
-#include <QFileDialog>
 #include <QTextStream>
-#include <QMessageBox>
 #include <QFileInfo>
+#include <QDebug>
+
+//控件
 #include <QApplication>
-#include <QCloseEvent>
+#include <QFileDialog>
+#include <QMessageBox>
 #include <QPushButton>
+#include <QMenu>
+
+
+//事件
+#include <QCloseEvent>
+#include <QContextMenuEvent>
+#include <QMouseEvent>
 
 MdiChild::MdiChild(QWidget *parent) : QTextEdit(parent)
 {
@@ -103,6 +114,44 @@ void MdiChild::closeEvent(QCloseEvent *event){
         event->accept();
     }else{
         event->ignore();
+    }
+}
+
+//右键菜单事件
+void MdiChild::contextMenuEvent(QContextMenuEvent *event){
+    QMenu *menu = new QMenu;
+    QAction *undo = menu->addAction(tr("撤消(&U)"),this,SLOT(undo()),QKeySequence::Undo);
+    undo->setEnabled(document()->isUndoAvailable());
+
+    QAction *redo = menu->addAction(tr("重做(&R)"),this,SLOT(redo()),QKeySequence::Redo);
+    redo->setEnabled(document()->isRedoAvailable());
+
+    menu->addSeparator();
+
+    QAction *cut = menu->addAction(tr("剪切(&T)"),this,SLOT(cut()),QKeySequence::Cut);
+    cut->setEnabled(textCursor().hasSelection());
+
+    QAction *copy = menu->addAction(tr("复制(&C)"),this,SLOT(copy()),QKeySequence::Copy);
+    copy->setEnabled(textCursor().hasSelection());
+
+    menu->addAction(tr("粘贴(&P)"),this,SLOT(paste()),QKeySequence::Paste);
+
+    QAction *clear = menu->addAction(tr("清空"),this,SLOT(clear()));
+    clear->setEnabled(! document()->isEmpty());
+
+    QAction *all = menu->addAction(tr("全选(&A)"),this,SLOT(selectAll()),QKeySequence::SelectAll);
+    all->setEnabled(! document()->isEmpty());
+
+    menu->exec(event->globalPos());
+    delete menu;
+}
+
+//鼠标双击
+void MdiChild::mouseDoubleClickEvent(QMouseEvent *e){
+
+    if(e->button() == Qt::LeftButton){
+        qDebug()<< "mouseDoubleClickEvent";
+        textCursor().select(QTextCursor::LineUnderCursor);
     }
 }
 

@@ -13,5 +13,7 @@
         <file>images/save.png</file>
         <file>images/saveAs.png</file>
         <file>images/undo.png</file>
+        <file>images/find.png</file>
+        <file>images/replace.png</file>
     </qresource>
 </RCC>

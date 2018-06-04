@@ -1,6 +1,8 @@
 #ifndef MDICHILD_H
 #define MDICHILD_H
 
+#include "hightlighter.h"
+
 #include <QWidget>
 #include <QTextEdit>
 
@@ -20,8 +22,13 @@ public:
         return curFileName;
     }
     QString userFirendlyName();
+
+    Highlighter *highLighter;
 protected:
     void closeEvent(QCloseEvent * event);
+    void contextMenuEvent(QContextMenuEvent *event);
+    void mouseDoubleClickEvent(QMouseEvent *e);
+
 private slots:
     void documentWasModified();
 

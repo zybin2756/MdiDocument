@@ -24,13 +24,17 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += \
+        hightlighter.cpp \
         main.cpp \
         mainwindow.cpp \
     mdichild.cpp
 
+
 HEADERS += \
         mainwindow.h \
+    hightlighter.h \
     mdichild.h
+
 
 FORMS += \
         mainwindow.ui

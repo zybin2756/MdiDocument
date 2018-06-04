@@ -1,24 +1,30 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "mdichild.h"
-#include <QFileDialog>
+#include "hightlighter.h"
 
-#include "mdichild.h"
-
-#include <QMdiSubWindow>
+#include <QDebug>
 #include <QFIleInfo>
-#include <QFileDialog>
 #include <QSignalMapper>
+#include <QClipboard>
+#include <QSettings>
+
+#include <QFileDialog>
+#include <QMdiSubWindow>
+#include <QLabel>
+
+#include <QCloseEvent>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    this->windowMapper = new QSignalMapper(this);
+    initWindow();
 
     updateMenus();
     updateWindowMenu();
+    readSetting();
     connect(ui->menu_W,SIGNAL(aboutToShow()),this,SLOT(updateWindowMenu()));
     connect(windowMapper,SIGNAL(mapped(QWidget*)),this,SLOT(setActiveSubWindow(QWidget*)));
     connect(ui->mdiArea,SIGNAL(subWindowActivated(QMdiSubWindow*)),this,SLOT(updateMenus()));
@@ -27,6 +33,27 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::initWindow(){
+    ui->mdiArea->setViewMode(QMdiArea::TabbedView);
+    ui->mdiArea->setTabsClosable(true);
+    ui->mdiArea->setTabsMovable(true);
+    ui->mdiArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    ui->mdiArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    ui->mainToolBar->setWindowTitle(tr("工具栏"));
+
+    this->windowMapper = new QSignalMapper(this);
+    this->board = QApplication::clipboard();
+
+    this->RowColLabel = new QLabel;
+    this->RowColLabel->setFrameStyle(QFrame::Box | QFrame::Sunken);
+    ui->statusBar->addPermanentWidget(RowColLabel);
+
+    ui->actionNew->setStatusTip(tr("新建文件"));
+    ui->actionSave->setStatusTip(tr("保存文件"));
+    ui->actionSaveAs->setStatusTip(tr("另存为"));
+    ui->actionOpen->setStatusTip(tr("打开文件"));
 }
 
 //更新工具栏状态
@@ -41,7 +68,9 @@ void MainWindow::updateMenus(){
     ui->actionPrevious->setEnabled(hasMdiChild);
     ui->actionClose->setEnabled(hasMdiChild);
     ui->actionCloseAll->setEnabled(hasMdiChild);
-
+    ui->actionFind->setEnabled(hasMdiChild);
+    ui->actionReplace->setEnabled(hasMdiChild);
+    ui->actionGoto->setEnabled(hasMdiChild);
     bool hasSelection = (activeMdiChild()
                          && activeMdiChild()->textCursor().hasSelection());
     ui->actionCut->setEnabled(hasSelection);
@@ -88,6 +117,16 @@ void MainWindow::updateWindowMenu(){
     }
 }
 
+void MainWindow::showTextRowAndCol(){
+    if(activeMdiChild()){
+        int rowNum = activeMdiChild()->textCursor().blockNumber() + 1;
+        int colNum = activeMdiChild()->textCursor().columnNumber() + 1;
+
+        RowColLabel->setText(tr("%1行 %2列").arg(rowNum).arg(colNum));
+//        ui->statusBar->showMessage(tr("%1行 %2列").arg(rowNum).arg(colNum),2000);
+    }
+}
+
 //获取当前子窗口
 MdiChild* MainWindow::activeMdiChild(){
     if(QMdiSubWindow *activeSubWindow = ui->mdiArea->activeSubWindow())
@@ -95,14 +134,17 @@ MdiChild* MainWindow::activeMdiChild(){
     return 0;
 }
 
+
+
 //创建子窗口
 MdiChild* MainWindow::createMdiChild(){
     MdiChild* child = new MdiChild;
+    child->highLighter = new Highlighter(child->document());
+    child->setMouseTracking(true);
     ui->mdiArea->addSubWindow(child);
-
     connect(child, SIGNAL(copyAvailable(bool)),ui->actionCopy,SLOT(setEnabled(bool)));
     connect(child, SIGNAL(copyAvailable(bool)),ui->actionCut,SLOT(setEnabled(bool)));
-
+    connect(child, SIGNAL(cursorPositionChanged()),this,SLOT(showTextRowAndCol()));
     connect(child->document(), SIGNAL(undoAvailable(bool)),ui->actionUndo,SLOT(setEnabled(bool)));
     connect(child->document(), SIGNAL(redoAvailable(bool)),ui->actionRedo,SLOT(setEnabled(bool)));
 
@@ -127,6 +169,32 @@ void MainWindow::setActiveSubWindow(QWidget* window){
         return;
     ui->mdiArea->setActiveSubWindow(qobject_cast<QMdiSubWindow*>(window));
 }
+
+void MainWindow::writeSetting(){
+    QSettings settings("zyb","MdiDocu");
+    settings.setValue("pos",pos());
+    settings.setValue("size",size());
+}
+
+void MainWindow::readSetting(){
+    QSettings settings("zyb","MdiDocu");
+    QPoint pos = settings.value("pos",QPoint(200,200)).toPoint();
+    QSize size = settings.value("size",QSize(200,200)).toSize();
+    move(pos);
+    resize(size);
+}
+
+void MainWindow::closeEvent(QCloseEvent *event){
+    this->ui->mdiArea->closeAllSubWindows();
+    if(ui->mdiArea->activeSubWindow()){
+        event->ignore();
+    }else{
+        writeSetting();
+        event->accept();
+    }
+}
+
+
 
 //新建文件
 void MainWindow::on_actionNew_triggered()
@@ -162,3 +230,102 @@ void MainWindow::on_actionOpen_triggered()
     }
 }
 
+
+void MainWindow::on_actionSave_triggered()
+{
+    if(activeMdiChild() && activeMdiChild()->save())
+        ui->statusBar->showMessage(tr("保存成功"),2000);
+}
+
+void MainWindow::on_actionSaveAs_triggered()
+{
+    if(activeMdiChild() && activeMdiChild()->saveAs())
+        ui->statusBar->showMessage(tr("保存成功"),2000);
+}
+
+void MainWindow::on_actionUndo_triggered()
+{
+    if(activeMdiChild()){
+        activeMdiChild()->undo();
+    }
+}
+
+void MainWindow::on_actionRedo_triggered()
+{
+    if(activeMdiChild()){
+        activeMdiChild()->redo();
+    }
+}
+
+void MainWindow::on_actionClose_triggered()
+{
+    ui->mdiArea->closeActiveSubWindow();
+}
+
+void MainWindow::on_actionCloseAll_triggered()
+{
+    ui->mdiArea->closeAllSubWindows();
+}
+
+void MainWindow::on_actionCut_triggered()
+{
+    if(activeMdiChild()){
+        this->board->setText(activeMdiChild()->textCursor().selectedText());
+        activeMdiChild()->textCursor().deleteChar();
+    }
+}
+
+void MainWindow::on_actionCopy_triggered()
+{
+    if(activeMdiChild()){
+        this->board->setText(activeMdiChild()->textCursor().selectedText());
+    }
+}
+
+void MainWindow::on_actionPaste_triggered()
+{
+    if(activeMdiChild()){
+        activeMdiChild()->textCursor().insertText(this->board->text());
+    }
+}
+
+void MainWindow::on_actionNext_triggered()
+{
+//    QList<QMdiSubWindow*> windows = ui->mdiArea->subWindowList();
+//    for(int i = 0; i < windows.size(); i++ ){
+//        MdiChild *child = qobject_cast<MdiChild*>(windows.at(i)->widget());
+//        if(child == activeMdiChild()){
+//            setActiveSubWindow(windows.at((i+1)%windows.size()));
+//            return;
+//        }
+//    }
+    ui->mdiArea->activateNextSubWindow();
+}
+
+void MainWindow::on_actionPrevious_triggered()
+{
+//    QList<QMdiSubWindow*> windows = ui->mdiArea->subWindowList();
+//    for(int i = 0; i < windows.size(); i++ ){
+//        MdiChild *child = qobject_cast<MdiChild*>(windows.at(i)->widget());
+//        if(child == activeMdiChild()){
+//            setActiveSubWindow(windows.at((i-1+windows.size())%windows.size()));
+//            return;
+//        }
+//    }
+    ui->mdiArea->activatePreviousSubWindow();
+}
+
+void MainWindow::on_actionTile_triggered()
+{
+    ui->mdiArea->tileSubWindows();
+}
+
+void MainWindow::on_actionCascade_triggered()
+{
+    ui->mdiArea->cascadeSubWindows();
+}
+
+void MainWindow::on_actionExit_triggered()
+{
+    qApp->closeAllWindows();
+}
